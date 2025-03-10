@@ -21,7 +21,6 @@ const connection = mysql.createConnection({
   database: 'Imuniza'
 });
 
-
 connection.connect((err) => {
   if (err) {
     console.message('Erro ao conectar: ', err);
@@ -46,112 +45,7 @@ function fixedJson(results) {
   return jsonUnico;
 }
 
-//testar login
-app.post('/login', (req,res) => {
-  const {email, senha} = req.params;
-  connection.query('CALL BuscarLogin(?,?)', [emaill,senha], (err, results) => {
-    if(err){
-      res.status(500).json({message: 'error ao realizar login'})
-    }
-    res.json(JSON.parse(fixedJson(results[0])))
-  })
-})
 
-app.get('/vacinas/:lote', (req, res) => {
-  const lote = req.params.lote;
-  console.log(lote);
-  connection.query('CALL ObterVacinasPorLote(?)', [lote], (err, results) => {
-    if (err) {
-      res.status(500).json({ message: 'Erro ao executar a consulta.' });
-      return;
-    }
-
-    res.json(JSON.parse(fixedJson(results[0])));
-  });
-});
-
-app.get('/fabricante/:idFabricante', (req, res) => {
-  const idFabricante = req.params.idFabricante;
-  console.log(idFabricante);
-  connection.query('CALL BuscarFabricante(?)', [idFabricante], (err, results) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({ message: 'Erro ao executar a consulta.' });
-      return;
-    }
-    console.log(results);
-    res.json(JSON.parse(fixedJson(results[0])));
-  });
-});
-
-
-
-app.get('/morador/:nome', (req, res) => {
-  const nome = req.params.nome;
-  console.log(nome);
-  connection.query('CALL ObterMoradorPorNome(?)', [nome], (err, results) => {
-    if (err) {
-      res.status(500).json({ message: 'Erro ao executar a consulta.' });
-      return;
-    }
-
-    res.json(JSON.parse(fixedJson(results[0])));
-  });
-});
-
-app.get('/pessoa/:CPF', (req, res) => {
-  const CPF = req.params.CPF;
-  console.log(CPF);
-  connection.query('CALL ObterPessoaPorCPF(?)', [CPF], (err, results) => {
-    if (err) {
-      res.status(500).json({ message: 'Erro ao executar a consulta.' });
-      return;
-    }
-    res.json(JSON.parse(fixedJson(results[0])));
-  });
-});
-
-app.get('/vacinacao/:CPF', (req, res) => {
-  const CPF = req.params.CPF;
-  console.log(CPF);
-  connection.query('CALL obterVacinasPorCPF(?)', [CPF], (err, results) => {
-    if (err) {
-      res.status(500).json({ message: 'Erro ao executar a consulta.' });
-      return;
-    }
-
-    console.log(results[0]);
-    res.json(JSON.parse(fixedJson(results[0])));
-  });
-});
-
-
-app.post('/vacinas', (req, res) => {
-  const {
-    nome,
-    fabricante,
-    lote,
-    quantidadeDoses,
-    dataValidade
-  } = req.body;
-  console.log(req.body);
-  const query = `
-    SELECT CadastrarVacina(?,?,?,?,?)
-  `;
-
-  connection.query(
-    query,
-    [nome, fabricante, lote, quantidadeDoses, dataValidade],
-    (err, result) => {
-      if (err) {
-        res.status(500).json({ message: 'Erro ao cadastrar vacina.' });
-        return;
-      }
-
-      res.json({ message: 'Vacina cadastrada com sucesso!' });
-    }
-  );
-});
 
 function validarCPF(cpf) {
   cpf = cpf.replace(/\D/g, ''); // Remove caracteres não numéricos
@@ -178,67 +72,171 @@ function validarCPF(cpf) {
 }
 
 
+app.get('/pessoa/:cpf', (req, res) => {
+  const cpf = req.params.cpf;
+  connection.query('CALL BuscarPessoaPorCPF(?)', [cpf], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+    res.json(JSON.parse(fixedJson(results[0])));
+  });
+});
 
-app.post('/morador', (req, res) => {
-  const {
-    CPF,
-    numeroSUS,
-    nome,
-    dataNascimento,
-    nomeDaMae,
-    sexo,
-    endereco,
-    plano,
-    estadoCivil,
-    escolaridade,
-    cor,
-  } = req.body;
-  console.log(req.body);
-  if(!validarCPF(CPF)){
+app.post('/pessoa', (req, res) => {
+  const {cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
+
+  if(!validarCPF(cpf)){
     console.log('CPF inválido');
     res.status(500).json({ message: 'CPF inválido.' });
     return;
   }
-  const query = `
-    SELECT InserirMorador(? ,? ,? ,? ,? ,? ,?n ,? ,? ,? )
-  `;
-  
-  connection.query(
-    query,
-    [CPF, numeroSUS, nome,dataNascimento, nomeDaMae, sexo, endereco, plano, estadoCivil, escolaridade, cor],
-    (err, result) => {
-      if (err) {
-        console.log(err);
-        res.status(500).json({ message: 'Erro ao cadastrar Morador.' });
-        return;
-      }
 
-      res.json({ message: 'Morador cadastrado com sucesso!' });
+  connection.query('CALL InserirPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ message: 'Erro ao cadastrar pessoa.' });
+      return;
     }
-  );
+    res.status(201).json({ message: 'Pessoa cadastrada com sucesso.' });
+  });
 });
 
-app.post('/vacinacao', (req, res) => {
-  const {
-    idVacina,
-    CPFmorador,
-    doseMinistrada
-  } = req.body;
-  console.log(req.body);
-  const query = `
-    SELECT CadastrarVacinaMorador(?,?,?)
-  `;
-
-  connection.query(
-    query,
-    [idVacina, CPFmorador, doseMinistrada],
-    (err, result) => {
-      if (err) {
-        res.status(500).json({ message: 'Erro ao cadastrar Vacina ao Morador.' });
-        return;
-      }
-
-      res.json({ message: 'Cadastrado com sucesso!' });
+app.put('/pessoa', (req, res) => {
+  const {cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
+  connection.query('CALL AtualizarPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
     }
-  );
+
+    res.status(200).json({ message: 'Pessoa atualizada com sucesso.' });
+  });
+});
+
+app.get('/fabricante/:idFabricante', (req, res) => {
+  const idFabricante = req.params.idFabricante;
+  console.log(idFabricante);
+  connection.query('CALL BuscarFabricante(?)', [idFabricante], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+
+    res.json(JSON.parse(fixedJson(results[0])));
+  });
+});
+
+
+app.post('/fabricante', (req, res) => {
+  const {nomeFabricante, cnpjFabricante, codFabricante} = req.body
+  connection.query('CALL InserirFabricante(?, ?, ?)', [nomeFabricante, cnpjFabricante, codFabricante], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao Cadastrar fabricante.' });
+      return;
+    }
+    res.status(201).json({ message: 'Fabricante cadastrado com sucesso.' });
+  });
+});
+
+
+app.post('/vacina', (req, res) => {
+  const { codVacina, nomeVacina, descricao, tipo, numDoses, faixaEtaria} = req.body
+  console.log(req.body)
+  connection.query('CALL RegistrarVacina(?, ?, ?, ?, ?, ?)', [ codVacina, nomeVacina, descricao, tipo, numDoses, faixaEtaria ], (err, results) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ message: 'Erro ao Cadastrar vacina.' });
+      return;
+    }
+    res.status(201).json({ message: 'Vacina cadastrado com sucesso.' });
+  });
+});
+
+app.put('/fabricante', (req, res) => {
+  const {nomeFabricante, cnpjFabricante, codFabricante} = req.body
+  console.log(cpf);
+  connection.query('CALL AtualizarFabricante(?, ?, ?)', [nomeFabricante, cnpjFabricante, codFabricante], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+
+    res.json(JSON.parse(fixedJson(results[0])));
+  });
+});
+
+app.post('/lote', (req, res) => {
+  const {codigoFabricante, codigoVacina, dataValidade, loteVacina, ingredientes, qtVacina} = req.body
+  connection.query('CALL RegistrarLoteVacina(?, ?, ?, ?, ?, ?)', [codigoFabricante, codigoVacina, dataValidade, loteVacina, ingredientes, qtVacina], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao Cadastrar lote.' });
+      return;
+    }
+
+    res.status(201).json({ message: 'Lote cadastrado com sucesso.' });
+  });
+});
+
+
+app.post('/vacinacao', (req, res) => {
+  const {cpf, loteVacina, dataVacinacao, doseAplicada} = req.body
+  connection.query('CALL RegistrarVacinação(?, ?, ?, ?)', [cpf, loteVacina, dataVacinacao, doseAplicada], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+
+    res.status(201).json({ message: 'Vacinação realizada com sucesso.' });
+  });
+});
+
+app.get('/vacina/:cpf', (req, res) => {
+  const cpf = req.params.cpf;
+  console.log(cpf);
+  connection.query('CALL BuscarVacinasPorCPF(?)', [cpf], (err, results) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+    res.json(results[0])
+  });
+});
+
+
+app.get('/lote/:lote', (req, res) => {
+  const lote = req.params.lote;
+  console.log(lote);
+  connection.query('CALL ObterVacinasPorLote(?)', [lote], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+    res.json(results[0]);
+  });
+});
+
+
+app.get('/vacinados', (req, res) => {
+  connection.query('CALL ListarTodosVacinados()', (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+
+    res.json(results[0]);
+  });
+});
+
+
+app.get('/covid', (req, res) => {
+  connection.query('CALL ListarVacinadosCovid()', (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+    console.log
+    res.json(results[0]);
+  });
 });
