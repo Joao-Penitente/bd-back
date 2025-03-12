@@ -5,7 +5,7 @@ app.use(cors());
 
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
@@ -79,12 +79,26 @@ app.get('/pessoa/:cpf', (req, res) => {
       res.status(500).json({ message: 'Erro ao executar a consulta.' });
       return;
     }
-    res.json(JSON.parse(fixedJson(results[0])));
+    res.json(results[0]);
   });
 });
 
+app.get('/pessoas', (req, res) => {
+  console.log('req');
+  connection.query('CALL ListarPessoas()', (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+    console.log(results[0])
+    res.json(results[0]);
+  });
+});
+
+
 app.post('/pessoa', (req, res) => {
-  const {cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
+  console.log(req.body);
+  const {cpf, numSUS, nome, nomeMae, dataNascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
 
   if(!validarCPF(cpf)){
     console.log('CPF inválido');
@@ -92,7 +106,7 @@ app.post('/pessoa', (req, res) => {
     return;
   }
 
-  connection.query('CALL InserirPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
+  connection.query('CALL InserirPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numSUS, nome, nomeMae, dataNascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
     if (err) {
       console.log(err);
       res.status(500).json({ message: 'Erro ao cadastrar pessoa.' });
@@ -103,9 +117,11 @@ app.post('/pessoa', (req, res) => {
 });
 
 app.put('/pessoa', (req, res) => {
-  const {cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
-  connection.query('CALL AtualizarPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numeroSUS, nome, nomeMae, data_nascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
+  console.log(req.body);
+  const {cpf, numSUS, nome, nomeMae, dataNascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano} = req.body
+  connection.query('CALL AtualizarPessoa(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [cpf, numSUS, nome, nomeMae, dataNascimento, sexo, cor, escolaridade, estadoCivil, cep, rua, complemento, observacao, possuiPlano], (err, results) => {
     if (err) {
+      console.log(err);
       res.status(500).json({ message: 'Erro ao executar a consulta.' });
       return;
     }
@@ -132,6 +148,7 @@ app.post('/fabricante', (req, res) => {
   const {nomeFabricante, cnpjFabricante, codFabricante} = req.body
   connection.query('CALL InserirFabricante(?, ?, ?)', [nomeFabricante, cnpjFabricante, codFabricante], (err, results) => {
     if (err) {
+      console.log(err);
       res.status(500).json({ message: 'Erro ao Cadastrar fabricante.' });
       return;
     }
@@ -140,10 +157,23 @@ app.post('/fabricante', (req, res) => {
 });
 
 
+app.get('/vacinaCod/:codVacina', (req, res) => {
+  const codVacina = req.params.codVacina;
+  connection.query('CALL BuscarVacinaPorCod(?)', [ codVacina ], (err, results) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ message: 'Erro ao Cadastrar vacina.' });
+      return;
+    }
+    console.log(results[0])
+    res.json(results[0]);
+  });
+});
+
 app.post('/vacina', (req, res) => {
-  const { codVacina, nomeVacina, descricao, tipo, numDoses, faixaEtaria} = req.body
+  const { codVacina, nomeVacina, descricao, tipoVacina, numDoses, faixaEtaria} = req.body
   console.log(req.body)
-  connection.query('CALL RegistrarVacina(?, ?, ?, ?, ?, ?)', [ codVacina, nomeVacina, descricao, tipo, numDoses, faixaEtaria ], (err, results) => {
+  connection.query('CALL RegistrarVacina(?, ?, ?, ?, ?, ?)', [ codVacina, nomeVacina, descricao, tipoVacina, numDoses, faixaEtaria ], (err, results) => {
     if (err) {
       console.log(err);
       res.status(500).json({ message: 'Erro ao Cadastrar vacina.' });
@@ -153,16 +183,27 @@ app.post('/vacina', (req, res) => {
   });
 });
 
+app.put('/vacina', (req, res) => {
+  const { codVacina, nomeVacina, descricao, tipoVacina, numDoses, faixaEtaria} = req.body
+  connection.query('CALL AtualizarVacina(?, ?, ?, ?, ?, ?)', [ codVacina, nomeVacina, descricao, tipoVacina, numDoses, faixaEtaria ], (err, results) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ message: 'Erro ao atualizar vacina.' });
+      return;
+    }
+    res.status(201).json({ message: 'Vacina atualizada com sucesso.' });
+  });
+});
+
 app.put('/fabricante', (req, res) => {
   const {nomeFabricante, cnpjFabricante, codFabricante} = req.body
-  console.log(cpf);
   connection.query('CALL AtualizarFabricante(?, ?, ?)', [nomeFabricante, cnpjFabricante, codFabricante], (err, results) => {
     if (err) {
       res.status(500).json({ message: 'Erro ao executar a consulta.' });
       return;
     }
 
-    res.json(JSON.parse(fixedJson(results[0])));
+    res.json(results[0]);
   });
 });
 
@@ -170,6 +211,7 @@ app.post('/lote', (req, res) => {
   const {codigoFabricante, codigoVacina, dataValidade, loteVacina, ingredientes, qtVacina} = req.body
   connection.query('CALL RegistrarLoteVacina(?, ?, ?, ?, ?, ?)', [codigoFabricante, codigoVacina, dataValidade, loteVacina, ingredientes, qtVacina], (err, results) => {
     if (err) {
+      console.log(err)
       res.status(500).json({ message: 'Erro ao Cadastrar lote.' });
       return;
     }
@@ -190,6 +232,19 @@ app.post('/vacinacao', (req, res) => {
     res.status(201).json({ message: 'Vacinação realizada com sucesso.' });
   });
 });
+
+app.put('/vacinacao', (req, res) => {
+  const {cpf, loteVacina, dataVacinacao, doseAplicada} = req.body
+  connection.query('CALL AtualizarVacinação(?, ?, ?, ?)', [cpf, loteVacina, dataVacinacao, doseAplicada], (err, results) => {
+    if (err) {
+      res.status(500).json({ message: 'Erro ao executar a consulta.' });
+      return;
+    }
+
+    res.status(201).json({ message: 'Vacinação realizada com sucesso.' });
+  });
+});
+
 
 app.get('/vacina/:cpf', (req, res) => {
   const cpf = req.params.cpf;
